@@ -29,6 +29,7 @@ workflows:
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$NEXT_BUILD_NUMBER"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
