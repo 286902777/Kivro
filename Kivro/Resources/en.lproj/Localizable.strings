@@ -16,6 +16,9 @@
 "auth.email_exists" = "An account already exists for this email.";
 "auth.registration_expired" = "Registration expired. Please sign up again.";
 "auth.registration_failed" = "Unable to create your account.";
+"auth.account_not_found" = "No account was found for this email.";
+"auth.password_updated" = "Password updated. Sign in with your new password.";
+"auth.password_update_failed" = "Unable to update your password.";
 "auth.sign_in_required" = "Sign in is required.";
 "auth.terms" = "By continuing you agree to our Terms of Service and Privacy Policy";
 "auth.terms_of_service" = "Terms of Service";

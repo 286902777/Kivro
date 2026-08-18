@@ -2,7 +2,11 @@ import UIKit
 import SnapKit
 import PhotosUI
 
-final class EditProfileViewController: KivroViewController, UITextFieldDelegate, PHPickerViewControllerDelegate {
+final class EditProfileViewController: KivroViewController,
+                                       UITextFieldDelegate,
+                                       PHPickerViewControllerDelegate,
+                                       UIImagePickerControllerDelegate,
+                                       UINavigationControllerDelegate {
     private var currentUserIdentifier: String { KivroSessionState.shared.currentUserIdentifier }
     private let nameField = KivroTextField(localizationKey: "profile.name_placeholder")
     private let avatarView = UIImageView()
@@ -115,6 +119,51 @@ final class EditProfileViewController: KivroViewController, UITextFieldDelegate,
     }
 
     @objc private func selectAvatar() {
+        let sourcePicker = UIAlertController(title: "Choose Profile Photo", message: nil, preferredStyle: .actionSheet)
+        sourcePicker.addAction(UIAlertAction(title: "Photo Library", style: .default) { [weak self] _ in
+            self?.selectAvatarFromLibrary()
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Take Photo", style: .default) { [weak self] _ in
+            self?.takeAvatarPhoto()
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sourcePicker.popoverPresentationController?.sourceView = view
+        sourcePicker.popoverPresentationController?.sourceRect = CGRect(
+            x: view.bounds.midX,
+            y: view.bounds.midY,
+            width: 1,
+            height: 1
+        )
+        present(sourcePicker, animated: true)
+    }
+
+    private func selectAvatarFromLibrary() {
+        KivroPhotoLibraryAccess.request(from: self) { [weak self] in
+            self?.presentAvatarPicker()
+        }
+    }
+
+    private func takeAvatarPhoto() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            KivroToastPresenter.show(message: "Camera is unavailable on this device.", in: view)
+            return
+        }
+        KivroCaptureAuthorization.request(mode: .photo, from: self) { [weak self] in
+            self?.presentAvatarCamera()
+        }
+    }
+
+    private func presentAvatarCamera() {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.cameraCaptureMode = .photo
+        picker.mediaTypes = ["public.image"]
+        picker.allowsEditing = false
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func presentAvatarPicker() {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.filter = .images
         configuration.selectionLimit = 1
@@ -134,10 +183,30 @@ final class EditProfileViewController: KivroViewController, UITextFieldDelegate,
                     KivroToastPresenter.show(message: "Unable to read this photo.", in: self.view)
                     return
                 }
-                self.selectedAvatar = image
-                self.avatarView.image = image
+                self.applyAvatar(image)
             }
         }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+    }
+
+    func imagePickerController(
+        _ picker: UIImagePickerController,
+        didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+    ) {
+        picker.dismiss(animated: true)
+        guard let image = info[.originalImage] as? UIImage else {
+            KivroToastPresenter.show(message: "Unable to read this photo.", in: view)
+            return
+        }
+        applyAvatar(image)
+    }
+
+    private func applyAvatar(_ image: UIImage) {
+        selectedAvatar = image
+        avatarView.image = image
     }
 
     @objc private func saveProfile() {

@@ -233,15 +233,34 @@ final class CreatorProfileViewController: KivroViewController {
             make.height.equalTo(45)
         }
 
-        let image = UIImageView(image: KivroVideoMedia.shared.image(resourceName: post.mediaAssetName))
+        let image = UIImageView()
         image.contentMode = .scaleAspectFill
         image.clipsToBounds = true
         image.layer.cornerRadius = 20
+        image.backgroundColor = UIColor.white.withAlphaComponent(0.05)
         contentView.addSubview(image)
         image.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(21)
             make.top.equalToSuperview().offset(top + 119)
             make.size.equalTo(160)
+        }
+        if post.isVideo,
+           let videoURL = KivroVideoMedia.shared.bundledURL(resourceName: post.mediaAssetName) {
+            KivroVideoMedia.shared.thumbnail(for: videoURL) { [weak image] thumbnail in
+                image?.image = thumbnail
+            }
+        } else {
+            image.image = KivroVideoMedia.shared.image(resourceName: post.mediaAssetName)
+        }
+
+        if post.isVideo {
+            let playIcon = UIImageView(image: UIImage(named: "kivro_video_play"))
+            playIcon.contentMode = .scaleAspectFit
+            contentView.addSubview(playIcon)
+            playIcon.snp.makeConstraints { make in
+                make.center.equalTo(image)
+                make.size.equalTo(60)
+            }
         }
 
         let mediaButton = UIButton(type: .custom)

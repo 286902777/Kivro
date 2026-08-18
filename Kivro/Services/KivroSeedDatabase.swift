@@ -19,6 +19,10 @@ enum KivroRegistrationError: Error {
     case duplicateEmail
 }
 
+enum KivroPasswordResetError: Error {
+    case accountNotFound
+}
+
 struct KivroStoredPost {
     let identifier: String
     let authorIdentifier: String
@@ -300,6 +304,23 @@ final class KivroSeedDatabase {
             email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         )
         return ((try? context.count(for: request)) ?? 0) > 0
+    }
+
+    func updatePassword(email: String, newPassword: String) throws {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let request = NSFetchRequest<NSManagedObject>(entityName: Entity.user)
+        request.fetchLimit = 1
+        request.predicate = NSPredicate(format: "email ==[c] %@", normalizedEmail)
+        guard let user = try context.fetch(request).first else {
+            throw KivroPasswordResetError.accountNotFound
+        }
+        user.setValue(newPassword, forKey: "password")
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
     }
 
     @discardableResult

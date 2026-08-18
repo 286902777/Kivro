@@ -366,6 +366,12 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
     }
 
     @objc private func analyzePhoto() {
+        KivroPhotoLibraryAccess.request(from: self) { [weak self] in
+            self?.presentPhotoPicker()
+        }
+    }
+
+    private func presentPhotoPicker() {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.filter = .images
         configuration.selectionLimit = 1

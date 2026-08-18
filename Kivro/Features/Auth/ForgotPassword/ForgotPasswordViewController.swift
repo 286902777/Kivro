@@ -88,16 +88,67 @@ final class ForgotPasswordViewController: KivroViewController, UITextFieldDelega
 
     @objc private func savePassword() {
         view.endEditing(true)
-        guard let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty,
-              let password = passwordField.text, !password.isEmpty,
-              password == confirmField.text else {
+        guard loadingOverlay.superview == nil else { return }
+        guard let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !email.isEmpty,
+              let password = passwordField.text,
+              !password.isEmpty,
+              let confirmation = confirmField.text,
+              !confirmation.isEmpty else {
             KivroToastPresenter.show(message: KivroStrings.value("common.required"), in: view)
             return
         }
-        loadingOverlay.show(in: view)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-            self?.loadingOverlay.hide()
-            self?.navigationController?.popViewController(animated: true)
+        guard Self.isValidEmail(email) else {
+            KivroToastPresenter.show(message: KivroStrings.value("auth.invalid_email"), in: view)
+            return
         }
+        guard password.count >= 6 else {
+            KivroToastPresenter.show(
+                message: KivroStrings.value("auth.password_min_length"),
+                in: view
+            )
+            return
+        }
+        guard password == confirmation else {
+            KivroToastPresenter.show(
+                message: KivroStrings.value("auth.password_mismatch"),
+                in: view
+            )
+            return
+        }
+        loadingOverlay.show(in: view)
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            do {
+                try KivroSeedDatabase.shared.updatePassword(email: email, newPassword: password)
+                loadingOverlay.hide()
+                guard let navigationController else { return }
+                navigationController.popViewController(animated: true)
+                KivroToastPresenter.show(
+                    message: KivroStrings.value("auth.password_updated"),
+                    in: navigationController.view
+                )
+            } catch KivroPasswordResetError.accountNotFound {
+                loadingOverlay.hide()
+                KivroToastPresenter.show(
+                    message: KivroStrings.value("auth.account_not_found"),
+                    in: view
+                )
+            } catch {
+                loadingOverlay.hide()
+                KivroToastPresenter.show(
+                    message: KivroStrings.value("auth.password_update_failed"),
+                    in: view
+                )
+            }
+        }
+    }
+
+    private static func isValidEmail(_ value: String) -> Bool {
+        let pattern = #"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$"#
+        return value.range(
+            of: pattern,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
     }
 }

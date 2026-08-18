@@ -2,9 +2,12 @@ import UIKit
 import SnapKit
 import PhotosUI
 import UniformTypeIdentifiers
-import AVFoundation
 
-final class PostComposerViewController: KivroViewController, UITextViewDelegate, PHPickerViewControllerDelegate {
+final class PostComposerViewController: KivroViewController,
+                                        UITextViewDelegate,
+                                        PHPickerViewControllerDelegate,
+                                        UIImagePickerControllerDelegate,
+                                        UINavigationControllerDelegate {
     private let captionView = UITextView()
     private let previewImageView = UIImageView()
     private let uploadIcon = UIImageView(image: UIImage(named: "kivro_add_photo_icon"))
@@ -205,6 +208,63 @@ final class PostComposerViewController: KivroViewController, UITextViewDelegate,
     }
 
     @objc private func selectMedia() {
+        view.endEditing(true)
+        let sourcePicker = UIAlertController(title: "Add Media", message: nil, preferredStyle: .actionSheet)
+        sourcePicker.addAction(UIAlertAction(title: "Photo Library", style: .default) { [weak self] _ in
+            self?.selectMediaFromLibrary()
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Take Photo", style: .default) { [weak self] _ in
+            self?.selectMediaFromCamera(mode: .photo)
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Record Video", style: .default) { [weak self] _ in
+            self?.selectMediaFromCamera(mode: .video)
+        })
+        sourcePicker.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sourcePicker.popoverPresentationController?.sourceView = view
+        sourcePicker.popoverPresentationController?.sourceRect = CGRect(
+            x: view.bounds.midX,
+            y: view.bounds.midY,
+            width: 1,
+            height: 1
+        )
+        present(sourcePicker, animated: true)
+    }
+
+    private func selectMediaFromLibrary() {
+        KivroPhotoLibraryAccess.request(from: self) { [weak self] in
+            self?.presentMediaPicker()
+        }
+    }
+
+    private func selectMediaFromCamera(mode: KivroCaptureAuthorization.Mode) {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            KivroToastPresenter.show(message: "Camera is unavailable on this device.", in: view)
+            return
+        }
+        KivroCaptureAuthorization.request(mode: mode, from: self) { [weak self] in
+            self?.presentCamera(mode: mode)
+        }
+    }
+
+    private func presentCamera(mode: KivroCaptureAuthorization.Mode) {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = self
+        picker.allowsEditing = false
+        switch mode {
+        case .photo:
+            picker.mediaTypes = [UTType.image.identifier]
+            picker.cameraCaptureMode = .photo
+        case .video:
+            picker.mediaTypes = [UTType.movie.identifier]
+            picker.cameraCaptureMode = .video
+            picker.videoQuality = .typeHigh
+            picker.videoMaximumDuration = 60
+        }
+        present(picker, animated: true)
+    }
+
+    private func presentMediaPicker() {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.filter = .any(of: [.images, .videos])
         configuration.selectionLimit = 1
@@ -238,23 +298,8 @@ final class PostComposerViewController: KivroViewController, UITextViewDelegate,
                     }
                     return
                 }
-                let asset = AVURLAsset(url: persistedURL)
-                let generator = AVAssetImageGenerator(asset: asset)
-                generator.appliesPreferredTrackTransform = true
-                generator.requestedTimeToleranceBefore = .zero
-                generator.requestedTimeToleranceAfter = .zero
-                let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
                 DispatchQueue.main.async {
-                    self.loadingOverlay.hide()
-                    guard let cgImage else {
-                        KivroToastPresenter.show(message: "Unable to read this video.", in: self.view)
-                        return
-                    }
-                    self.applySelectedMedia(
-                        image: UIImage(cgImage: cgImage),
-                        isVideo: true,
-                        videoURL: persistedURL
-                    )
+                    self.finishVideoSelection(with: persistedURL)
                 }
             }
             return
@@ -266,6 +311,53 @@ final class PostComposerViewController: KivroViewController, UITextViewDelegate,
                 guard let self, let image = object as? UIImage else { return }
                 self.applySelectedMedia(image: image, isVideo: false, videoURL: nil)
             }
+        }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+    }
+
+    func imagePickerController(
+        _ picker: UIImagePickerController,
+        didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+    ) {
+        picker.dismiss(animated: true)
+        let mediaType = info[.mediaType] as? String
+        if mediaType == UTType.movie.identifier, let sourceURL = info[.mediaURL] as? URL {
+            loadingOverlay.show(in: view)
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self else { return }
+                do {
+                    let persistedURL = try KivroVideoMedia.shared.persistPickedVideo(from: sourceURL)
+                    DispatchQueue.main.async {
+                        self.finishVideoSelection(with: persistedURL)
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self.loadingOverlay.hide()
+                        KivroToastPresenter.show(message: "Unable to save this video.", in: self.view)
+                    }
+                }
+            }
+            return
+        }
+        guard let image = info[.originalImage] as? UIImage else {
+            KivroToastPresenter.show(message: "Unable to read this photo.", in: view)
+            return
+        }
+        applySelectedMedia(image: image, isVideo: false, videoURL: nil)
+    }
+
+    private func finishVideoSelection(with videoURL: URL) {
+        KivroVideoMedia.shared.thumbnail(for: videoURL) { [weak self] image in
+            guard let self else { return }
+            self.loadingOverlay.hide()
+            guard let image else {
+                KivroToastPresenter.show(message: "Unable to read this video.", in: self.view)
+                return
+            }
+            self.applySelectedMedia(image: image, isVideo: true, videoURL: videoURL)
         }
     }
 

@@ -445,6 +445,12 @@ final class ChatViewController: KivroViewController,
 
     @objc private func selectPhoto() {
         inputField.resignFirstResponder()
+        KivroPhotoLibraryAccess.request(from: self) { [weak self] in
+            self?.presentPhotoPicker()
+        }
+    }
+
+    private func presentPhotoPicker() {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.selectionLimit = 1
         configuration.filter = .images
