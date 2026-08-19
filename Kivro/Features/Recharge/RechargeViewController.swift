@@ -4,20 +4,19 @@ import StoreKit
 
 final class RechargeViewController: KivroViewController,
     UICollectionViewDataSource,
-    UICollectionViewDelegate,
-    SKProductsRequestDelegate,
-    SKRequestDelegate,
-    SKPaymentTransactionObserver {
+    UICollectionViewDelegate {
     private var currentUserIdentifier: String { KivroSessionState.shared.currentUserIdentifier }
     private let packages = CoinPackage.rechargePackages
+    private let storeService = KivroStoreKitService.shared
     private let loadingOverlay = KivroLoadingOverlay()
     private let balanceValueLabel = UILabel()
-    private let purchaseContextDefaults = UserDefaults.standard
     private var isPurchasing = false
+    private var isLoadingProducts = false
     private var selectedPackage: CoinPackage?
     private var purchasingUserIdentifier: String?
-    private var productsRequest: SKProductsRequest?
-    private var isObservingPaymentQueue = false
+    private var productsByIdentifier: [String: Product] = [:]
+    private var productLoadingTask: Task<Void, Never>?
+    private var purchaseTask: Task<Void, Never>?
     private lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
 
     override func viewDidLoad() {
@@ -30,22 +29,14 @@ final class RechargeViewController: KivroViewController,
             name: .kivroCoinBalanceDidChange,
             object: nil
         )
-        startObservingPaymentQueue()
         refreshBalance()
+        loadProducts()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
-        startObservingPaymentQueue()
         refreshBalance()
-    }
-
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        guard isMovingFromParent || navigationController?.isBeingDismissed == true else { return }
-        productsRequest?.cancel()
-        stopObservingPaymentQueue()
     }
 
     private func configureLayout() {
@@ -141,171 +132,100 @@ final class RechargeViewController: KivroViewController,
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RechargePackageCell.reuseIdentifier, for: indexPath)
-        (cell as? RechargePackageCell)?.configure(with: packages[indexPath.item])
+        let package = packages[indexPath.item]
+        (cell as? RechargePackageCell)?.configure(
+            with: package,
+            displayPrice: productsByIdentifier[package.productIdentifier]?.displayPrice
+        )
         return cell
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard !isPurchasing,
+              !isLoadingProducts,
               packages.indices.contains(indexPath.item),
               KivroAccountAccess.requireAccount(from: self) else { return }
-        guard SKPaymentQueue.canMakePayments() else {
+        guard AppStore.canMakePayments else {
             showToast("recharge.purchase.disabled")
             return
         }
         let package = packages[indexPath.item]
         selectedPackage = package
         purchasingUserIdentifier = currentUserIdentifier
-        purchaseContextDefaults.set(
-            currentUserIdentifier,
-            forKey: purchaseUserKey(for: package.productIdentifier)
-        )
         isPurchasing = true
         collectionView.isUserInteractionEnabled = false
         loadingOverlay.show(in: view)
-        requestProduct(for: package)
-    }
-
-    private func requestProduct(for package: CoinPackage) {
-        let request = SKProductsRequest(productIdentifiers: [package.productIdentifier])
-        productsRequest = request
-        request.delegate = self
-        request.start()
-    }
-
-    private func startObservingPaymentQueue() {
-        guard !isObservingPaymentQueue else { return }
-        SKPaymentQueue.default().add(self)
-        isObservingPaymentQueue = true
-    }
-
-    private func stopObservingPaymentQueue() {
-        guard isObservingPaymentQueue else { return }
-        SKPaymentQueue.default().remove(self)
-        isObservingPaymentQueue = false
-    }
-
-    func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
-        productsRequest = nil
-        guard isPurchasing,
-              let package = selectedPackage,
-              let product = response.products.first(where: { $0.productIdentifier == package.productIdentifier }) else {
-            if let package = selectedPackage { clearPurchaseUser(for: package.productIdentifier) }
-            showToast("recharge.purchase.unavailable")
+        purchaseTask = Task { [weak self] in
+            guard let self else { return }
+            let outcome = await storeService.purchase(
+                package: package,
+                userIdentifier: purchasingUserIdentifier ?? currentUserIdentifier
+            )
             finishPurchase()
-            return
+            handlePurchaseOutcome(outcome)
         }
-        SKPaymentQueue.default().add(SKPayment(product: product))
     }
 
-    func request(_ request: SKRequest, didFailWithError error: Error) {
-        guard request === productsRequest else { return }
-        productsRequest = nil
-        if let package = selectedPackage { clearPurchaseUser(for: package.productIdentifier) }
-        showToast("recharge.purchase.unavailable")
-        finishPurchase()
-    }
-
-    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        for transaction in transactions {
-            let productIdentifier = transaction.payment.productIdentifier
-            guard let package = packages.first(where: { $0.productIdentifier == productIdentifier }),
-                  let userIdentifier = purchaseUserIdentifier(for: productIdentifier) else { continue }
-
-            switch transaction.transactionState {
-            case .purchased:
-                complete(transaction, package: package, userIdentifier: userIdentifier, queue: queue)
-            case .failed:
-                let wasCancelled = (transaction.error as? SKError)?.code == .paymentCancelled
-                queue.finishTransaction(transaction)
-                clearPurchaseUser(for: productIdentifier)
-                if !wasCancelled { showToast("recharge.purchase.failed") }
-                finishPurchase()
-            case .deferred:
-                showToast("recharge.purchase.pending")
-                finishPurchase()
-            case .restored:
-                queue.finishTransaction(transaction)
-                clearPurchaseUser(for: productIdentifier)
-                finishPurchase()
-            case .purchasing:
-                break
-            @unknown default:
-                queue.finishTransaction(transaction)
-                clearPurchaseUser(for: productIdentifier)
-                showToast("recharge.purchase.failed")
-                finishPurchase()
+    private func loadProducts() {
+        guard !isLoadingProducts, !isPurchasing else { return }
+        isLoadingProducts = true
+        collectionView.isUserInteractionEnabled = false
+        loadingOverlay.show(in: view)
+        productLoadingTask = Task { [weak self] in
+            guard let self else { return }
+            defer { finishProductLoading() }
+            do {
+                productsByIdentifier = try await storeService.products(for: packages)
+                collectionView.reloadData()
+                if productsByIdentifier.isEmpty {
+                    showToast("recharge.purchase.unavailable")
+                }
+            } catch {
+                if !Task.isCancelled {
+                    showToast("recharge.purchase.unavailable")
+                }
             }
         }
     }
 
-    private func complete(
-        _ transaction: SKPaymentTransaction,
-        package: CoinPackage,
-        userIdentifier: String,
-        queue: SKPaymentQueue
-    ) {
-        guard transaction.payment.productIdentifier == package.productIdentifier,
-              let transactionIdentifier = transaction.transactionIdentifier,
-              hasAppStoreReceipt else {
-            showToast("recharge.purchase.unverified")
-            finishPurchase()
-            return
-        }
-
-        let creditResult = KivroCoinWallet.shared.creditPurchase(
-            package.coinAmount,
-            for: userIdentifier,
-            transactionIdentifier: transactionIdentifier
-        )
-        switch creditResult {
+    private func handlePurchaseOutcome(_ outcome: KivroStoreKitService.PurchaseOutcome) {
+        switch outcome {
         case .credited:
-            queue.finishTransaction(transaction)
-            clearPurchaseUser(for: package.productIdentifier)
             refreshBalance()
             showToast("recharge.purchase.success")
-            finishPurchase()
         case .alreadyCredited:
-            queue.finishTransaction(transaction)
-            clearPurchaseUser(for: package.productIdentifier)
             refreshBalance()
-            finishPurchase()
-        case .failed:
+        case .pending:
+            showToast("recharge.purchase.pending")
+        case .cancelled:
+            break
+        case .unavailable:
+            showToast("recharge.purchase.unavailable")
+        case .unverified:
+            showToast("recharge.purchase.unverified")
+        case .mismatched:
+            showToast("recharge.purchase.mismatch")
+        case .creditFailed:
             showToast("recharge.purchase.credit_failed")
-            finishPurchase()
+        case .failed:
+            showToast("recharge.purchase.failed")
         }
-    }
-
-    private var hasAppStoreReceipt: Bool {
-        guard let receiptURL = Bundle.main.appStoreReceiptURL,
-              let receiptData = try? Data(contentsOf: receiptURL) else { return false }
-        return !receiptData.isEmpty
-    }
-
-    private func purchaseUserIdentifier(for productIdentifier: String) -> String? {
-        if selectedPackage?.productIdentifier == productIdentifier,
-           let purchasingUserIdentifier {
-            return purchasingUserIdentifier
-        }
-        return purchaseContextDefaults.string(forKey: purchaseUserKey(for: productIdentifier))
-    }
-
-    private func clearPurchaseUser(for productIdentifier: String) {
-        purchaseContextDefaults.removeObject(forKey: purchaseUserKey(for: productIdentifier))
-    }
-
-    private func purchaseUserKey(for productIdentifier: String) -> String {
-        KivroConstantMask.join("kivro.purchase.", "user.", productIdentifier)
     }
 
     private func finishPurchase() {
-        productsRequest?.cancel()
-        productsRequest = nil
+        purchaseTask = nil
         selectedPackage = nil
         purchasingUserIdentifier = nil
-        if isPurchasing {
+        loadingOverlay.hide()
+        isPurchasing = false
+        collectionView.isUserInteractionEnabled = !isLoadingProducts
+    }
+
+    private func finishProductLoading() {
+        productLoadingTask = nil
+        isLoadingProducts = false
+        if !isPurchasing {
             loadingOverlay.hide()
-            isPurchasing = false
             collectionView.isUserInteractionEnabled = true
         }
     }

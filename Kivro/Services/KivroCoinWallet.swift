@@ -30,12 +30,14 @@ final class KivroCoinWallet {
     func balance(for userIdentifier: String) -> Int {
         if let record = readKeychainRecord(for: userIdentifier) {
             _ = writeKeychainRecord(record, for: userIdentifier)
+            _ = KivroWalletMirrorStore.shared.setBalance(record.balance, for: userIdentifier)
             mirror(record.balance, for: userIdentifier)
             return record.balance
         }
 
         let record = WalletRecord(balance: initialBalance, creditedTransactionIdentifiers: [])
         _ = writeKeychainRecord(record, for: userIdentifier)
+        _ = KivroWalletMirrorStore.shared.setBalance(initialBalance, for: userIdentifier)
         mirror(initialBalance, for: userIdentifier)
         return initialBalance
     }
@@ -75,8 +77,18 @@ final class KivroCoinWallet {
 
     @discardableResult
     func deleteWallet(for userIdentifier: String) -> Bool {
+        let previousRecord = readKeychainRecord(for: userIdentifier)
+        guard KivroWalletMirrorStore.shared.deleteBalance(for: userIdentifier) else { return false }
         let status = SecItemDelete(baseQuery(for: userIdentifier) as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { return false }
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            if let previousRecord {
+                _ = KivroWalletMirrorStore.shared.setBalance(
+                    previousRecord.balance,
+                    for: userIdentifier
+                )
+            }
+            return false
+        }
         defaults.removeObject(forKey: mirrorKey(for: userIdentifier))
         return true
     }
@@ -90,7 +102,13 @@ final class KivroCoinWallet {
     }
 
     private func save(_ record: WalletRecord, for userIdentifier: String) -> Bool {
+        let previousRecord = readKeychainRecord(for: userIdentifier)
+            ?? WalletRecord(balance: initialBalance, creditedTransactionIdentifiers: [])
         guard writeKeychainRecord(record, for: userIdentifier) else { return false }
+        guard KivroWalletMirrorStore.shared.setBalance(record.balance, for: userIdentifier) else {
+            _ = writeKeychainRecord(previousRecord, for: userIdentifier)
+            return false
+        }
         mirror(record.balance, for: userIdentifier)
         NotificationCenter.default.post(
             name: .kivroCoinBalanceDidChange,
@@ -110,8 +128,8 @@ final class KivroCoinWallet {
         if let record = try? JSONDecoder().decode(WalletRecord.self, from: data) {
             return record
         }
-        guard String(data: data, encoding: .utf8).flatMap(Int.init) != nil else { return nil }
-        return WalletRecord(balance: initialBalance, creditedTransactionIdentifiers: [])
+        guard let legacyBalance = String(data: data, encoding: .utf8).flatMap(Int.init) else { return nil }
+        return WalletRecord(balance: legacyBalance, creditedTransactionIdentifiers: [])
     }
 
     private func writeKeychainRecord(_ record: WalletRecord, for userIdentifier: String) -> Bool {

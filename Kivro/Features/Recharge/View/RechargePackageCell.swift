@@ -56,8 +56,8 @@ final class RechargePackageCell: UICollectionViewCell {
         fatalError("Storyboard initialization is unsupported")
     }
 
-    func configure(with package: CoinPackage) {
+    func configure(with package: CoinPackage, displayPrice: String? = nil) {
         amountLabel.text = String(package.coinAmount)
-        priceLabel.text = KivroStrings.value(package.displayPriceKey)
+        priceLabel.text = displayPrice ?? KivroStrings.value(package.displayPriceKey)
     }
 }

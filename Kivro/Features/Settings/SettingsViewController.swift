@@ -116,6 +116,7 @@ final class SettingsViewController: KivroViewController {
                     userIdentifier: user.identifier
                 )
                 _ = KivroCoinWallet.shared.deleteWallet(for: user.identifier)
+                KivroStoreKitService.shared.clearAccountMapping(for: user.identifier)
                 KivroProfileState.shared.clear(for: user.identifier)
                 KivroProductState.shared.clear(for: user.identifier)
                 KivroPostStore.shared.removePosts(authorIdentifier: user.identifier)
