@@ -6,6 +6,7 @@ final class FeedViewController: KivroViewController, UICollectionViewDataSource,
     private let showsVideo: Bool
     private let categories = ["For You", "Gothic", "Cyber", "Fantasy", "Mecha", "Period"]
     private let horizontalInset: CGFloat = 21
+    private let contentView = UIView()
     private var selectedCategory = "For You"
     private var categoryButtons: [UIButton] = []
     private lazy var collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
@@ -111,9 +112,16 @@ final class FeedViewController: KivroViewController, UICollectionViewDataSource,
         view.addSubview(background)
         background.snp.makeConstraints { make in make.edges.equalToSuperview() }
 
+        view.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.centerX.equalToSuperview()
+            make.width.equalToSuperview().priority(.high)
+            make.width.lessThanOrEqualTo(600)
+        }
+
         let categoryScroll = UIScrollView()
         categoryScroll.showsHorizontalScrollIndicator = false
-        view.addSubview(categoryScroll)
+        contentView.addSubview(categoryScroll)
         categoryScroll.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(horizontalInset)
             make.trailing.equalToSuperview().inset(120)
@@ -155,7 +163,7 @@ final class FeedViewController: KivroViewController, UICollectionViewDataSource,
         release.layer.borderWidth = 2
         release.layer.cornerRadius = 20
         release.addTarget(self, action: #selector(showComposer), for: .touchUpInside)
-        view.addSubview(release)
+        contentView.addSubview(release)
         release.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(16)
             make.top.equalToSuperview().offset(61)
@@ -170,7 +178,7 @@ final class FeedViewController: KivroViewController, UICollectionViewDataSource,
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.register(FeedPostCell.self, forCellWithReuseIdentifier: FeedPostCell.reuseIdentifier)
-        view.addSubview(collectionView)
+        contentView.addSubview(collectionView)
         collectionView.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(horizontalInset)
             make.top.equalToSuperview().offset(132)

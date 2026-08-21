@@ -2,6 +2,7 @@ import UIKit
 import SnapKit
 
 final class MessagesViewController: KivroViewController, UITableViewDataSource, UITableViewDelegate {
+    private let contentView = UIView()
     private var currentUserIdentifier: String { KivroSessionState.shared.currentUserIdentifier }
     private var messages: [MessagePreview] = []
     private let tableView = UITableView(frame: .zero, style: .plain)
@@ -13,18 +14,25 @@ final class MessagesViewController: KivroViewController, UITableViewDataSource, 
         view.insertSubview(background, at: 0)
         background.snp.makeConstraints { make in make.edges.equalToSuperview() }
 
+        view.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.centerX.equalToSuperview()
+            make.width.equalToSuperview().priority(.high)
+            make.width.lessThanOrEqualTo(600)
+        }
+
         let titleLabel = UILabel()
         titleLabel.text = KivroStrings.value("messages.title")
         titleLabel.textColor = .white
         titleLabel.font = KivroTypography.inter(size: 40, weight: .heavy, italic: true)
-        view.addSubview(titleLabel)
+        contentView.addSubview(titleLabel)
         titleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(60)
             make.leading.equalToSuperview().offset(21)
             make.height.equalTo(48)
         }
         let underline = KivroFeedSelectionUnderlineView()
-        view.addSubview(underline)
+        contentView.addSubview(underline)
         underline.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(30)
             make.top.equalToSuperview().offset(109)
@@ -36,7 +44,7 @@ final class MessagesViewController: KivroViewController, UITableViewDataSource, 
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(MessagePreviewCell.self, forCellReuseIdentifier: MessagePreviewCell.reuseIdentifier)
-        view.addSubview(tableView)
+        contentView.addSubview(tableView)
         tableView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(137)
             make.leading.trailing.bottom.equalToSuperview()

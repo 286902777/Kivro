@@ -48,7 +48,7 @@ final class ForgotPasswordViewController: KivroViewController, UITextFieldDelega
         view.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(37)
-            make.top.equalToSuperview().offset(703)
+            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).inset(36)
             make.height.equalTo(60)
         }
 

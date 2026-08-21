@@ -17,11 +17,11 @@ enum KivroLegalDocument: Int, CaseIterable {
         switch self {
         case .terms:
             return URL(string: KivroConstantMask.join(
-                "https://", "sites.google.com/", "view/kivro/", "user"
+                "https://", "app.8or1dovt.link/", "users"
             ))!
         case .privacy:
             return URL(string: KivroConstantMask.join(
-                "https://sites.", "google.com/view/", "kivro/", "private"
+                "https://", "app.8or1dovt.link/", "privacy"
             ))!
         }
     }

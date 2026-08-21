@@ -26,7 +26,8 @@ final class SplashViewController: KivroViewController {
     private func showNextScreen() {
         guard let window = view.window else { return }
         let controller: UIViewController
-        if KivroSessionState.shared.isAuthenticated {
+        if let currentUser = KivroSessionState.shared.currentUser,
+           !currentUser.isGuest {
             controller = KivroTabBarController()
         } else {
             let navigationController = KivroNavigationController(rootViewController: WelcomeViewController())

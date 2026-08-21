@@ -30,6 +30,8 @@ final class ProfileSetupViewController: KivroViewController,
     private let manLabel = UILabel()
     private let womanLabel = UILabel()
     private let loadingOverlay = KivroLoadingOverlay()
+    private let contentScrollView = UIScrollView()
+    private let contentView = UIView()
     private var selectedAvatar: UIImage? = UIImage(named: "kivro_default_profile_avatar")
 
     override func viewDidLoad() {
@@ -47,10 +49,27 @@ final class ProfileSetupViewController: KivroViewController,
         view.addSubview(background)
         background.snp.makeConstraints { $0.edges.equalToSuperview() }
 
+        contentScrollView.showsVerticalScrollIndicator = false
+        contentScrollView.contentInsetAdjustmentBehavior = .never
+        contentScrollView.contentInset.bottom = 112
+        contentScrollView.verticalScrollIndicatorInsets.bottom = 112
+        view.addSubview(contentScrollView)
+        contentScrollView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        contentScrollView.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.equalTo(contentScrollView.contentLayoutGuide)
+            make.centerX.equalTo(contentScrollView.frameLayoutGuide)
+            make.width.equalTo(contentScrollView.frameLayoutGuide).priority(.high)
+            make.width.lessThanOrEqualTo(375)
+            make.height.equalTo(650)
+        }
+
         avatarView.contentMode = .scaleAspectFill
         avatarView.clipsToBounds = true
         avatarView.layer.cornerRadius = 56
-        view.addSubview(avatarView)
+        contentView.addSubview(avatarView)
         avatarView.snp.makeConstraints { make in
             make.centerX.equalToSuperview()
             make.top.equalToSuperview().offset(84)
@@ -60,7 +79,7 @@ final class ProfileSetupViewController: KivroViewController,
         let avatarButton = UIButton(type: .custom)
         avatarButton.accessibilityLabel = "Choose profile photo"
         avatarButton.addTarget(self, action: #selector(selectAvatar), for: .touchUpInside)
-        view.addSubview(avatarButton)
+        contentView.addSubview(avatarButton)
         avatarButton.snp.makeConstraints { make in
             make.edges.equalTo(avatarView)
         }
@@ -68,7 +87,7 @@ final class ProfileSetupViewController: KivroViewController,
         let cameraButton = UIButton(type: .custom)
         cameraButton.accessibilityLabel = "Choose profile photo"
         cameraButton.addTarget(self, action: #selector(selectAvatar), for: .touchUpInside)
-        view.addSubview(cameraButton)
+        contentView.addSubview(cameraButton)
         cameraButton.snp.makeConstraints { make in
             make.centerX.equalTo(avatarView)
             make.bottom.equalTo(avatarView).offset(8)
@@ -86,7 +105,7 @@ final class ProfileSetupViewController: KivroViewController,
 
         let improve = UIImageView(image: UIImage(named: "kivro_profile_improve_title"))
         improve.contentMode = .scaleAspectFit
-        view.addSubview(improve)
+        contentView.addSubview(improve)
         improve.snp.makeConstraints { make in
             make.centerX.equalToSuperview()
             make.top.equalToSuperview().offset(220)
@@ -96,7 +115,7 @@ final class ProfileSetupViewController: KivroViewController,
 
         nameField.delegate = self
         nameField.returnKeyType = .done
-        view.addSubview(nameField)
+        contentView.addSubview(nameField)
         nameField.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(34)
             make.top.equalToSuperview().offset(302)
@@ -130,8 +149,10 @@ final class ProfileSetupViewController: KivroViewController,
         release.addTarget(self, action: #selector(releaseProfile), for: .touchUpInside)
         view.addSubview(release)
         release.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(37)
-            make.top.equalToSuperview().offset(703)
+            make.centerX.equalToSuperview()
+            make.leading.trailing.equalToSuperview().inset(37).priority(.high)
+            make.width.lessThanOrEqualTo(356)
+            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).inset(16)
             make.height.equalTo(60)
         }
 
@@ -152,7 +173,7 @@ final class ProfileSetupViewController: KivroViewController,
         button.titleLabel?.font = KivroTypography.inter(size: 13, weight: .regular)
         button.contentHorizontalAlignment = .left
         button.addTarget(self, action: action, for: .touchUpInside)
-        view.addSubview(button)
+        contentView.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(34)
             make.top.equalToSuperview().offset(top)
@@ -211,7 +232,7 @@ final class ProfileSetupViewController: KivroViewController,
         button.imageView?.contentMode = .scaleAspectFit
         button.imageEdgeInsets = UIEdgeInsets(top: 22, left: 22, bottom: 22, right: 22)
         button.addTarget(self, action: #selector(selectGender(_:)), for: .touchUpInside)
-        view.addSubview(button)
+        contentView.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(leading)
             make.top.equalToSuperview().offset(524)
@@ -224,7 +245,7 @@ final class ProfileSetupViewController: KivroViewController,
         label.textColor = .white
         label.font = KivroTypography.inter(size: 12, weight: .bold)
         label.textAlignment = .center
-        view.addSubview(label)
+        contentView.addSubview(label)
         label.snp.makeConstraints { make in
             make.centerX.equalToSuperview().offset(centerX - 187.5)
             make.top.equalToSuperview().offset(615)

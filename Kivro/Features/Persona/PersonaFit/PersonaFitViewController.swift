@@ -9,6 +9,8 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
     private var analyzedImage: UIImage?
     private var analyzedScores: [Int]
     private let loadingOverlay = KivroLoadingOverlay()
+    private let contentScrollView = UIScrollView()
+    private let contentView = UIView()
     private weak var personaCardButton: KivroGradientButton?
     private weak var personaCardCostBadge: UIView?
     private weak var lockedResultsMaskContainer: UIView?
@@ -55,6 +57,23 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
             make.edges.equalToSuperview()
         }
 
+        contentView.subviews.forEach { $0.removeFromSuperview() }
+        contentScrollView.showsVerticalScrollIndicator = false
+        contentScrollView.contentInsetAdjustmentBehavior = .never
+        view.addSubview(contentScrollView)
+        contentScrollView.snp.remakeConstraints { make in
+            make.top.equalToSuperview().offset(105)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
+        contentScrollView.addSubview(contentView)
+        contentView.snp.remakeConstraints { make in
+            make.top.bottom.equalTo(contentScrollView.contentLayoutGuide)
+            make.centerX.equalTo(contentScrollView.frameLayoutGuide)
+            make.width.equalTo(contentScrollView.frameLayoutGuide).priority(.high)
+            make.width.lessThanOrEqualTo(375)
+            make.height.equalTo(707)
+        }
+
         let backButton = KivroBackButton()
         backButton.addTarget(self, action: #selector(closeScreen), for: .touchUpInside)
         view.addSubview(backButton)
@@ -82,10 +101,10 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
         let card = KivroPersonaUploadCardView()
         card.layer.cornerRadius = 29
         card.clipsToBounds = false
-        view.addSubview(card)
+        contentView.addSubview(card)
         card.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(19)
-            make.top.equalToSuperview().offset(127)
+            make.top.equalToSuperview().offset(22)
             make.height.equalTo(196)
         }
 
@@ -170,11 +189,11 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
         panel.backgroundColor = UIColor(red: 48 / 255, green: 43 / 255, blue: 54 / 255, alpha: 1)
         panel.layer.cornerRadius = 29
         panel.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        view.addSubview(panel)
+        contentView.addSubview(panel)
         panel.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(20)
-            make.top.equalToSuperview().offset(377)
-            make.bottom.equalToSuperview()
+            make.top.equalToSuperview().offset(272)
+            make.height.equalTo(435)
         }
 
         let unknown = UILabel()
@@ -291,10 +310,10 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
         analyzing.text = "Analyzing facial structure & style fit..."
         analyzing.textColor = UIColor(red: 86 / 255, green: 140 / 255, blue: 1, alpha: 1)
         analyzing.font = KivroTypography.inter(size: 11, weight: .regular)
-        view.addSubview(analyzing)
+        contentView.addSubview(analyzing)
         analyzing.snp.makeConstraints { make in
             make.centerX.equalToSuperview()
-            make.top.equalToSuperview().offset(340)
+            make.top.equalToSuperview().offset(235)
         }
 
         let button = KivroGradientButton()
@@ -302,10 +321,10 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.78
         button.addTarget(self, action: #selector(showPersonaCard), for: .touchUpInside)
-        view.addSubview(button)
+        contentView.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(33)
-            make.top.equalToSuperview().offset(718)
+            make.top.equalToSuperview().offset(613)
             make.height.equalTo(60)
         }
         personaCardButton = button
@@ -313,7 +332,7 @@ final class PersonaFitViewController: KivroViewController, PHPickerViewControlle
         let costBadge = UIView()
         costBadge.backgroundColor = UIColor(red: 100 / 255, green: 91 / 255, blue: 1, alpha: 1)
         costBadge.layer.cornerRadius = 12
-        view.addSubview(costBadge)
+        contentView.addSubview(costBadge)
         costBadge.snp.makeConstraints { make in
             make.trailing.equalTo(button).inset(1)
             make.top.equalTo(button).offset(-7)

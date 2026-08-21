@@ -35,6 +35,8 @@ final class WelcomeViewController: KivroViewController, UITextViewDelegate {
 
     private func configureLayout() {
         navigationController?.setNavigationBarHidden(true, animated: false)
+        let isWideLayout = UIDevice.current.userInterfaceIdiom == .pad
+            || traitCollection.horizontalSizeClass == .regular
 
         let backdrop = UIImageView(image: UIImage(named: "kivro_welcome_background"))
         backdrop.contentMode = .scaleToFill
@@ -82,7 +84,7 @@ final class WelcomeViewController: KivroViewController, UITextViewDelegate {
         view.addSubview(newButton)
         view.addSubview(emailButton)
         newButton.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(466)
+            make.top.equalToSuperview().offset(isWideLayout ? 442 : 466)
             make.leading.trailing.equalToSuperview().inset(33)
             make.height.equalTo(60)
         }
@@ -112,7 +114,11 @@ final class WelcomeViewController: KivroViewController, UITextViewDelegate {
         signUpButton.setAttributedTitle(accountTitle, for: .normal)
         view.addSubview(signUpButton)
         signUpButton.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(614)
+            if isWideLayout {
+                make.top.equalTo(emailButton.snp.bottom).offset(16)
+            } else {
+                make.top.equalToSuperview().offset(614)
+            }
             make.centerX.equalToSuperview()
             make.height.equalTo(30)
         }
@@ -132,10 +138,23 @@ final class WelcomeViewController: KivroViewController, UITextViewDelegate {
         ]
         view.addSubview(agreement)
         agreement.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(757)
+            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).inset(isWideLayout ? 8 : 20)
             make.leading.equalToSuperview().offset(62)
             make.trailing.equalToSuperview().inset(40)
             make.height.equalTo(24)
+        }
+
+        if isWideLayout {
+            signUpButton.snp.remakeConstraints { make in
+                make.bottom.equalTo(agreement.snp.top).offset(-16)
+                make.centerX.equalToSuperview()
+                make.height.equalTo(30)
+            }
+            emailButton.snp.remakeConstraints { make in
+                make.bottom.equalTo(signUpButton.snp.top).offset(-16)
+                make.leading.trailing.equalToSuperview().inset(33)
+                make.height.equalTo(60)
+            }
         }
 
         agreementButton.isSelected = KivroEULAConsent.isAccepted

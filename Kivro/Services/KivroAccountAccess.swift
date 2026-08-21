@@ -14,13 +14,18 @@ enum KivroAccountAccess {
             confirmKey: "prompt.login.confirm"
         ) { [weak controller] in
             guard let controller else { return }
-            let navigationController = (controller as? UINavigationController)
-                ?? controller.navigationController
-                ?? ((controller as? UITabBarController)?.selectedViewController as? UINavigationController)
-                ?? (controller.tabBarController?.selectedViewController as? UINavigationController)
+            KivroSessionState.shared.relinquishSession()
+            let window = controller.viewIfLoaded?.window
+                ?? controller.presentingViewController?.viewIfLoaded?.window
+            let welcomeController = WelcomeViewController()
+            let authorizationNavigationController = KivroNavigationController(
+                rootViewController: welcomeController
+            )
+            authorizationNavigationController.setNavigationBarHidden(true, animated: false)
             let signInController = EmailSignInViewController()
             signInController.hidesBottomBarWhenPushed = true
-            navigationController?.pushViewController(signInController, animated: true)
+            authorizationNavigationController.pushViewController(signInController, animated: false)
+            window?.rootViewController = authorizationNavigationController
         }
         controller.present(dialog, animated: true)
         return false

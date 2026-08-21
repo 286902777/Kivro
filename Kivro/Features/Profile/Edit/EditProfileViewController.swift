@@ -12,6 +12,8 @@ final class EditProfileViewController: KivroViewController,
     private let avatarView = UIImageView()
     private let loadingOverlay = KivroLoadingOverlay()
     private let saveButton = KivroGradientButton()
+    private let contentScrollView = UIScrollView()
+    private let contentView = UIView()
     private var selectedAvatar: UIImage?
 
     override func viewDidLoad() {
@@ -33,22 +35,51 @@ final class EditProfileViewController: KivroViewController,
             make.height.equalTo(105)
         }
 
+        saveButton.setTitle("SAVE", for: .normal)
+        saveButton.addTarget(self, action: #selector(saveProfile), for: .touchUpInside)
+        view.addSubview(saveButton)
+        saveButton.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.leading.trailing.equalToSuperview().inset(37).priority(.high)
+            make.width.lessThanOrEqualTo(356)
+            make.bottom.equalTo(view.safeAreaLayoutGuide).inset(16)
+            make.height.equalTo(60)
+        }
+
+        contentScrollView.showsVerticalScrollIndicator = false
+        contentScrollView.alwaysBounceVertical = false
+        contentScrollView.contentInsetAdjustmentBehavior = .never
+        view.addSubview(contentScrollView)
+        contentScrollView.snp.makeConstraints { make in
+            make.top.equalTo(header.snp.bottom)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.equalTo(saveButton.snp.top).offset(-16)
+        }
+        contentScrollView.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.equalTo(contentScrollView.contentLayoutGuide)
+            make.centerX.equalTo(contentScrollView.frameLayoutGuide)
+            make.width.equalTo(contentScrollView.frameLayoutGuide).priority(.high)
+            make.width.lessThanOrEqualTo(430)
+            make.height.equalTo(335)
+        }
+
         avatarView.image = KivroProfileState.shared.resolvedAvatar(for: currentUserIdentifier)
             ?? UIImage(named: "kivro_profile_editor_avatar")
         avatarView.contentMode = .scaleAspectFill
         avatarView.clipsToBounds = true
         avatarView.layer.cornerRadius = 56
-        view.addSubview(avatarView)
+        contentView.addSubview(avatarView)
         avatarView.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(132)
-            make.top.equalToSuperview().offset(144)
+            make.centerX.equalToSuperview()
+            make.top.equalToSuperview().offset(39)
             make.size.equalTo(112)
         }
 
         let avatarButton = UIButton(type: .custom)
         avatarButton.accessibilityLabel = "Choose profile photo"
         avatarButton.addTarget(self, action: #selector(selectAvatar), for: .touchUpInside)
-        view.addSubview(avatarButton)
+        contentView.addSubview(avatarButton)
         avatarButton.snp.makeConstraints { make in
             make.edges.equalTo(avatarView)
         }
@@ -56,7 +87,7 @@ final class EditProfileViewController: KivroViewController,
         let cameraButton = UIButton(type: .custom)
         cameraButton.accessibilityLabel = "Choose profile photo"
         cameraButton.addTarget(self, action: #selector(selectAvatar), for: .touchUpInside)
-        view.addSubview(cameraButton)
+        contentView.addSubview(cameraButton)
         cameraButton.snp.makeConstraints { make in
             make.centerX.equalTo(avatarView)
             make.bottom.equalTo(avatarView).offset(8)
@@ -74,10 +105,10 @@ final class EditProfileViewController: KivroViewController,
 
         let improve = UIImageView(image: UIImage(named: "kivro_profile_improve_title"))
         improve.contentMode = .scaleAspectFit
-        view.addSubview(improve)
+        contentView.addSubview(improve)
         improve.snp.makeConstraints { make in
             make.centerX.equalToSuperview()
-            make.top.equalToSuperview().offset(280)
+            make.top.equalToSuperview().offset(175)
             make.width.equalTo(215)
             make.height.equalTo(16)
         }
@@ -85,20 +116,11 @@ final class EditProfileViewController: KivroViewController,
         nameField.delegate = self
         nameField.returnKeyType = .done
         nameField.text = KivroProfileState.shared.resolvedName(for: currentUserIdentifier)
-        view.addSubview(nameField)
+        contentView.addSubview(nameField)
         nameField.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(34)
-            make.top.equalToSuperview().offset(362)
+            make.top.equalToSuperview().offset(257)
             make.height.equalTo(48)
-        }
-
-        saveButton.setTitle("SAVE", for: .normal)
-        saveButton.addTarget(self, action: #selector(saveProfile), for: .touchUpInside)
-        view.addSubview(saveButton)
-        saveButton.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(37)
-            make.top.equalToSuperview().offset(703)
-            make.height.equalTo(60)
         }
 
         let indicator = UIView()

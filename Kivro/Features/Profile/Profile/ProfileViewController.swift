@@ -4,6 +4,7 @@ import SnapKit
 final class ProfileViewController: KivroViewController,
                                    UICollectionViewDataSource,
                                    UICollectionViewDelegateFlowLayout {
+    private let contentView = UIView()
     private var currentUserIdentifier: String { KivroSessionState.shared.currentUserIdentifier }
     private let profileAvatarView = UIImageView()
     private let profileNameLabel = UILabel()
@@ -35,6 +36,13 @@ final class ProfileViewController: KivroViewController,
         view.addSubview(background)
         background.snp.makeConstraints { $0.edges.equalToSuperview() }
 
+        view.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.centerX.equalToSuperview()
+            make.width.equalToSuperview().priority(.high)
+            make.width.lessThanOrEqualTo(430)
+        }
+
         configureHeader()
         configureRechargeCard()
         configureActions()
@@ -64,7 +72,7 @@ final class ProfileViewController: KivroViewController,
         profileAvatarView.contentMode = .scaleAspectFill
         profileAvatarView.clipsToBounds = true
         profileAvatarView.layer.cornerRadius = 50
-        view.addSubview(profileAvatarView)
+        contentView.addSubview(profileAvatarView)
         profileAvatarView.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(16)
             make.top.equalToSuperview().offset(63)
@@ -110,7 +118,7 @@ final class ProfileViewController: KivroViewController,
         let followingButton = UIButton(type: .custom)
         followingButton.accessibilityLabel = "Following"
         followingButton.addTarget(self, action: #selector(showFollowing), for: .touchUpInside)
-        view.addSubview(followingButton)
+        contentView.addSubview(followingButton)
         followingButton.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(124)
             make.top.equalToSuperview().offset(105)
@@ -121,7 +129,7 @@ final class ProfileViewController: KivroViewController,
         let followersButton = UIButton(type: .custom)
         followersButton.accessibilityLabel = "Followers"
         followersButton.addTarget(self, action: #selector(showFollowers), for: .touchUpInside)
-        view.addSubview(followersButton)
+        contentView.addSubview(followersButton)
         followersButton.snp.makeConstraints { make in
             make.leading.equalTo(followingButton.snp.trailing)
             make.trailing.equalToSuperview().inset(12)
@@ -132,7 +140,7 @@ final class ProfileViewController: KivroViewController,
     private func configureRechargeCard() {
         let card = KivroRechargeCardButton()
         card.addTarget(self, action: #selector(showRecharge), for: .touchUpInside)
-        view.addSubview(card)
+        contentView.addSubview(card)
         card.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(18)
             make.top.equalToSuperview().offset(190)
@@ -141,7 +149,7 @@ final class ProfileViewController: KivroViewController,
 
         let gift = UIImageView(image: UIImage(named: "kivro_coin_stack"))
         gift.contentMode = .scaleAspectFit
-        view.addSubview(gift)
+        contentView.addSubview(gift)
         gift.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(5)
             make.top.equalToSuperview().offset(160)
@@ -181,10 +189,10 @@ final class ProfileViewController: KivroViewController,
             alpha: 1
         ).cgColor
         settingsButton.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
-        view.addSubview(settingsButton)
+        contentView.addSubview(settingsButton)
         settingsButton.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(21)
-            make.trailing.equalTo(view.snp.centerX).offset(-10)
+            make.trailing.equalTo(contentView.snp.centerX).offset(-10)
             make.top.equalToSuperview().offset(311)
             make.height.equalTo(54)
         }
@@ -192,9 +200,9 @@ final class ProfileViewController: KivroViewController,
         let editButton = KivroProfileEditButton()
         editButton.setTitle("Edit Profile", for: .normal)
         editButton.addTarget(self, action: #selector(showEditProfile), for: .touchUpInside)
-        view.addSubview(editButton)
+        contentView.addSubview(editButton)
         editButton.snp.makeConstraints { make in
-            make.leading.equalTo(view.snp.centerX).offset(10)
+            make.leading.equalTo(contentView.snp.centerX).offset(10)
             make.trailing.equalToSuperview().inset(21)
             make.top.equalToSuperview().offset(311)
             make.height.equalTo(54)
@@ -219,11 +227,11 @@ final class ProfileViewController: KivroViewController,
             FeedPostCell.self,
             forCellWithReuseIdentifier: FeedPostCell.reuseIdentifier
         )
-        view.addSubview(workCollectionView)
+        contentView.addSubview(workCollectionView)
         workCollectionView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(422)
             make.leading.trailing.equalToSuperview().inset(21)
-            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom)
+            make.bottom.equalTo(contentView.safeAreaLayoutGuide.snp.bottom)
         }
 
         emptyWorkLabel.text = "No work yet."
@@ -231,7 +239,7 @@ final class ProfileViewController: KivroViewController,
         emptyWorkLabel.font = KivroTypography.inter(size: 16, weight: .medium)
         emptyWorkLabel.textAlignment = .center
         emptyWorkLabel.isUserInteractionEnabled = false
-        view.addSubview(emptyWorkLabel)
+        contentView.addSubview(emptyWorkLabel)
         emptyWorkLabel.snp.makeConstraints { make in
             make.centerX.equalTo(workCollectionView)
             make.top.equalTo(workCollectionView).offset(54)
@@ -390,7 +398,7 @@ final class ProfileViewController: KivroViewController,
         label.text = text
         label.textColor = UIColor.white.withAlphaComponent(alpha)
         label.font = font
-        view.addSubview(label)
+        contentView.addSubview(label)
         label.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(x)
             make.top.equalToSuperview().offset(y)

@@ -4,6 +4,8 @@ import SnapKit
 final class ReportViewController: KivroViewController {
     private let loadingOverlay = KivroLoadingOverlay()
     private let reportButton = KivroGradientButton()
+    private let contentScrollView = UIScrollView()
+    private let contentView = UIView()
     private let reasons = [
         "POLITICALLY SENSITIVE",
         "BLOODY VIOLENCE",
@@ -36,6 +38,34 @@ final class ReportViewController: KivroViewController {
             make.height.equalTo(105)
         }
 
+        reportButton.setTitle("REPORT", for: .normal)
+        reportButton.addTarget(self, action: #selector(submitReport), for: .touchUpInside)
+        view.addSubview(reportButton)
+        reportButton.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.leading.trailing.equalToSuperview().inset(37).priority(.high)
+            make.width.lessThanOrEqualTo(356)
+            make.bottom.equalTo(view.safeAreaLayoutGuide).inset(16)
+            make.height.equalTo(60)
+        }
+
+        contentScrollView.showsVerticalScrollIndicator = false
+        contentScrollView.contentInsetAdjustmentBehavior = .never
+        view.addSubview(contentScrollView)
+        contentScrollView.snp.makeConstraints { make in
+            make.top.equalTo(header.snp.bottom)
+            make.leading.trailing.equalToSuperview()
+            make.bottom.equalTo(reportButton.snp.top).offset(-16)
+        }
+        contentScrollView.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.equalTo(contentScrollView.contentLayoutGuide)
+            make.centerX.equalTo(contentScrollView.frameLayoutGuide)
+            make.width.equalTo(contentScrollView.frameLayoutGuide).priority(.high)
+            make.width.lessThanOrEqualTo(430)
+            make.height.equalTo(573)
+        }
+
         for (index, reason) in reasons.enumerated() {
             let button = KivroReportReasonButton()
             button.tag = index
@@ -44,21 +74,12 @@ final class ReportViewController: KivroViewController {
             button.isSelected = index == selectedReason
             button.addTarget(self, action: #selector(selectReason(_:)), for: .touchUpInside)
             reasonButtons.append(button)
-            view.addSubview(button)
+            contentView.addSubview(button)
             button.snp.makeConstraints { make in
                 make.leading.trailing.equalToSuperview().inset(20)
-                make.top.equalToSuperview().offset(134 + CGFloat(index * 79))
+                make.top.equalToSuperview().offset(29 + CGFloat(index * 79))
                 make.height.equalTo(54)
             }
-        }
-
-        reportButton.setTitle("REPORT", for: .normal)
-        reportButton.addTarget(self, action: #selector(submitReport), for: .touchUpInside)
-        view.addSubview(reportButton)
-        reportButton.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(37)
-            make.top.equalToSuperview().offset(703)
-            make.height.equalTo(60)
         }
     }
 

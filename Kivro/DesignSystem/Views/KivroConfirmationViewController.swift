@@ -7,8 +7,6 @@ final class KivroConfirmationViewController: UIViewController {
         static let cardWidth: CGFloat = 336
         static let compactTop: CGFloat = 291
         static let compactHeight: CGFloat = 230
-        static let largeTop: CGFloat = 53
-        static let largeHeight: CGFloat = 728
         static let buttonWidth: CGFloat = 140
         static let buttonHeight: CGFloat = 44
     }
@@ -90,9 +88,12 @@ final class KivroConfirmationViewController: UIViewController {
         let card = makeBackgroundView(imageName: "kivro_dialog_background_large")
         view.addSubview(card)
         card.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(Layout.horizontalInset)
-            make.top.equalToSuperview().offset(Layout.largeTop)
-            make.height.equalTo(Layout.largeHeight)
+            make.centerX.equalToSuperview()
+            make.leading.greaterThanOrEqualToSuperview().offset(Layout.horizontalInset)
+            make.trailing.lessThanOrEqualToSuperview().inset(Layout.horizontalInset)
+            make.width.equalToSuperview().offset(-Layout.horizontalInset * 2).priority(.high)
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top).offset(16)
+            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).inset(16)
         }
 
         let titleLabel = makeTitleLabel(text: "EULA")
@@ -120,7 +121,7 @@ final class KivroConfirmationViewController: UIViewController {
             make.bottom.equalToSuperview().inset(76)
         }
 
-        addActions(to: card, top: 665)
+        addActions(to: card, bottom: 20)
     }
 
     private func makeBackgroundView(imageName: String) -> UIImageView {
@@ -143,7 +144,7 @@ final class KivroConfirmationViewController: UIViewController {
         return label
     }
 
-    private func addActions(to card: UIView, top: CGFloat) {
+    private func addActions(to card: UIView, top: CGFloat? = nil, bottom: CGFloat? = nil) {
         let cancelButton = KivroDialogButton(style: .secondary)
         cancelButton.setTitle(KivroStrings.value("common.cancel"), for: .normal)
         cancelButton.addTarget(self, action: #selector(cancel), for: .touchUpInside)
@@ -157,13 +158,17 @@ final class KivroConfirmationViewController: UIViewController {
         card.addSubview(confirmButton)
         cancelButton.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(20)
-            make.top.equalToSuperview().offset(top)
+            if let top {
+                make.top.equalToSuperview().offset(top)
+            } else if let bottom {
+                make.bottom.equalToSuperview().inset(bottom)
+            }
             make.width.equalTo(Layout.buttonWidth)
             make.height.equalTo(Layout.buttonHeight)
         }
         confirmButton.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(20)
-            make.top.equalTo(cancelButton)
+            make.top.bottom.equalTo(cancelButton)
             make.width.equalTo(Layout.buttonWidth)
             make.height.equalTo(Layout.buttonHeight)
         }

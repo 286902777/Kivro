@@ -2,6 +2,8 @@ import UIKit
 import SnapKit
 
 final class HomeViewController: KivroViewController {
+    private let contentScrollView = UIScrollView()
+    private let contentView = UIView()
     private var currentUserIdentifier: String { KivroSessionState.shared.currentUserIdentifier }
     private let radarPrice = 300
     private let loadingOverlay = KivroLoadingOverlay()
@@ -82,6 +84,23 @@ final class HomeViewController: KivroViewController {
         view.addSubview(backgroundView)
         backgroundView.snp.makeConstraints { make in make.edges.equalToSuperview() }
 
+        contentScrollView.showsVerticalScrollIndicator = false
+        contentScrollView.alwaysBounceVertical = false
+        contentScrollView.contentInsetAdjustmentBehavior = .never
+        view.addSubview(contentScrollView)
+        contentScrollView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+
+        contentScrollView.addSubview(contentView)
+        contentView.snp.makeConstraints { make in
+            make.top.bottom.equalTo(contentScrollView.contentLayoutGuide)
+            make.centerX.equalTo(contentScrollView.frameLayoutGuide)
+            make.width.equalTo(contentScrollView.frameLayoutGuide).priority(.high)
+            make.width.lessThanOrEqualTo(430)
+            make.height.equalTo(760)
+        }
+
         configurePersonaFitEntry()
         configureFilters()
         configureRadarDots()
@@ -94,7 +113,7 @@ final class HomeViewController: KivroViewController {
         button.backgroundColor = .clear
         button.accessibilityLabel = "Open AI Persona Fit"
         button.addTarget(self, action: #selector(showPersonaFit), for: .touchUpInside)
-        view.addSubview(button)
+        contentView.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(46)
             make.top.equalToSuperview().offset(196)
@@ -107,7 +126,7 @@ final class HomeViewController: KivroViewController {
         balanceButton.backgroundColor = UIColor(red: 128 / 255, green: 34 / 255, blue: 203 / 255, alpha: 1)
         balanceButton.layer.cornerRadius = 15
         balanceButton.addTarget(self, action: #selector(showRecharge), for: .touchUpInside)
-        view.addSubview(balanceButton)
+        contentView.addSubview(balanceButton)
         balanceButton.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(10)
             make.top.equalToSuperview().offset(273)
@@ -117,8 +136,11 @@ final class HomeViewController: KivroViewController {
 
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = false
+        scrollView.alwaysBounceHorizontal = true
+        scrollView.isDirectionalLockEnabled = true
+        scrollView.contentInsetAdjustmentBehavior = .never
         scrollView.contentInset = UIEdgeInsets(top: 0, left: 11, bottom: 0, right: 0)
-        view.addSubview(scrollView)
+        contentView.addSubview(scrollView)
         scrollView.snp.makeConstraints { make in
             make.leading.equalToSuperview()
             make.trailing.equalTo(balanceButton.snp.leading).offset(-16)
@@ -131,8 +153,10 @@ final class HomeViewController: KivroViewController {
         stack.spacing = 8
         scrollView.addSubview(stack)
         stack.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-            make.height.equalToSuperview()
+            make.leading.trailing.equalTo(scrollView.contentLayoutGuide)
+            make.top.bottom.equalTo(scrollView.frameLayoutGuide)
+            make.height.equalTo(scrollView.frameLayoutGuide)
+            make.width.greaterThanOrEqualTo(scrollView.frameLayoutGuide)
         }
 
         filterButtons = filterTitles.enumerated().map { index, title in
@@ -183,7 +207,7 @@ final class HomeViewController: KivroViewController {
             let dot = UIView()
             dot.backgroundColor = UIColor.white.withAlphaComponent(opacity)
             dot.layer.cornerRadius = 6
-            view.addSubview(dot)
+            contentView.addSubview(dot)
             dot.snp.makeConstraints { make in
                 make.leading.equalToSuperview().offset(x)
                 make.top.equalToSuperview().offset(y)
@@ -203,7 +227,7 @@ final class HomeViewController: KivroViewController {
             button.layer.borderWidth = 2
             button.layer.borderColor = UIColor.white.withAlphaComponent(0.65).cgColor
             button.addTarget(self, action: #selector(openRadarProfile(_:)), for: .touchUpInside)
-            view.addSubview(button)
+            contentView.addSubview(button)
             button.snp.makeConstraints { make in
                 make.leading.equalToSuperview().offset(position.0)
                 make.top.equalToSuperview().offset(position.1)
@@ -218,7 +242,7 @@ final class HomeViewController: KivroViewController {
         let button = KivroGradientButton()
         button.setTitle("LAUNCH RADAR", for: .normal)
         button.addTarget(self, action: #selector(launchRadar), for: .touchUpInside)
-        view.addSubview(button)
+        contentView.addSubview(button)
         button.snp.makeConstraints { make in
             make.leading.trailing.equalToSuperview().inset(36)
             make.top.equalToSuperview().offset(658)
@@ -228,7 +252,7 @@ final class HomeViewController: KivroViewController {
         let costBadge = UIView()
         costBadge.backgroundColor = UIColor(red: 100 / 255, green: 91 / 255, blue: 1, alpha: 1)
         costBadge.layer.cornerRadius = 12
-        view.addSubview(costBadge)
+        contentView.addSubview(costBadge)
         costBadge.snp.makeConstraints { make in
             make.trailing.equalTo(button).inset(1)
             make.top.equalTo(button).offset(-7)
